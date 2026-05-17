@@ -1,0 +1,35 @@
+# --- Claude Code workspace (skills, references, settings) ---
+.claude/
+
+# --- MATLAB ---
+*.asv
+*.autosave
+*.m~
+*.mat
+*.mex*
+*.mexw32
+*.mexw64
+*.mexa64
+*.mexmaci64
+*.slxc
+*.mlapp.bak
+slprj/
+sccprj/
+codegen/
+*.lock
+.MATLABDriveTag
+
+# --- OS / Editor ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- Logs / Local runs ---
+*.log
+*.tmp
+*.bak
