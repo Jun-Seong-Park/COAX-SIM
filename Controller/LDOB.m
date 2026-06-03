@@ -8,13 +8,13 @@ function [d_hat, z] = LDOB(omega, Torque_d, z, p)
 %     omega    [3x1] : angular velocity [p; q; r]
 %     Torque_d [3x1] : applied control torque
 %     z        [3x1] : observer internal state
-%     p        struct: params (uses p.Inertia, p.dt_ctrl, p.L_dob)
+%     p        struct: params (uses p.Inertia, p.dt_ctrl, p.L_dob_ang)
 %
 %   Outputs:
 %     d_hat    [3x1] : estimated disturbance torque
 %     z        [3x1] : updated internal state
 
-    L = p.L_dob;
+    L = p.L_dob_ang;
 
     % Auxiliary variable
     p_val = L * p.Inertia * omega;

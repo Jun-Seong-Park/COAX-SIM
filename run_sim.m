@@ -43,7 +43,7 @@ function results = run_sim(params)
     X      = zeros(16,1);
     X_d    = zeros(16,1);
 
-    % Set initial position: xy from scenario, z = 0 (ground)
+    % Set initial position: xy from scenario, z = 0 (ground) overwrite
     Xd_init      = scenario_call(0, params.scenario_id);
     X(1:2)       = Xd_init(1:2);        % start at scenario's xy
     X(3)         = 0;                   % start at ground (NED z=0)
@@ -51,6 +51,7 @@ function results = run_sim(params)
     %% Controller state
     torque_d   = zeros(3,1);
     filt_state = zeros(6,1);
+    filt_pos   = zeros(6,1);        % CmdFilterPos state (separate from attitude filt_state)
     z_dob      = zeros(3,1);
     z_dob_pos  = zeros(3,1);        % LDOB_pos internal state
     Desired    = zeros(3,3);
@@ -67,25 +68,31 @@ function results = run_sim(params)
     save_counter = 0;
 
     %% Torque max (initial, updated in loop)
-    Torque_max = [params.r_cd * params.k(1) * params.Omega_hover^2 * sin(params.tilt_max(1));
+    torque_max = [params.r_cd * params.k(1) * params.Omega_hover^2 * sin(params.tilt_max(1));
                   params.r_cd * params.k(2) * params.Omega_hover^2 * sin(params.tilt_max(2));
                   0.2];
-    state_max  = [params.angle_max, params.angle_dot_max, Torque_max];
+    state_max  = [params.angle_max, params.angle_dot_max, torque_max];
 
     %% Pre-allocate save arrays
-    n_save = ceil(n_sim / save_steps);
-    X_s = zeros(16, n_save);   X_d_s = zeros(16, n_save);
+    n_save = ceil(n_sim / save_steps); % save vector
+    X_s = zeros(16, n_save);   
+    X_d_s = zeros(16, n_save);
     torque_d_s = zeros(3, n_save);
-    Acc_d_s = zeros(3, n_save); Acc_s = zeros(3, n_save);
-    Force_s = zeros(3, n_save); Moment_s = zeros(3, n_save);
+    Acc_d_s = zeros(3, n_save); 
+    Acc_s = zeros(3, n_save);
+    Force_s = zeros(3, n_save); 
+    Moment_s = zeros(3, n_save);
     torque_rotor_s = zeros(3, n_save);  % rotor-only torque
     torque_total_s = zeros(3, n_save);  % rotor + disturbance (total applied)
-    d_hat_s = zeros(3, n_save); Disturbance_s = zeros(6, n_save);
-    B1_s = zeros(3, n_save);   B2_s = zeros(3, n_save);
+    d_hat_s = zeros(3, n_save); 
+    Disturbance_s = zeros(6, n_save);
+    B1_s = zeros(3, n_save);   
+    B2_s = zeros(3, n_save);
     Torque_max_s = zeros(3, n_save);
     Acc_Max_s = zeros(3, n_save);
     Thrust_d_s = zeros(1, n_save);
-    Vel_d_s = zeros(3, n_save);  Vel_s = zeros(3, n_save);
+    Vel_d_s = zeros(3, n_save);  
+    Vel_s = zeros(3, n_save);
 
     %% MPC initialisation (only when needed)
     if params.ctrl_mode == 4
@@ -115,7 +122,7 @@ function results = run_sim(params)
 
             % Update torque limits
             state_max(:,3) = TorqueMax(Omega_up, Omega_dw, params.rot_max, params);
-            Torque_max = state_max(:,3);
+            torque_max = state_max(:,3);
 
             %% ---- Observer ----
             pos_est   = X(1:3);
@@ -127,6 +134,7 @@ function results = run_sim(params)
                 case 1  % True state + true disturbance (perfect info)
                     d_hat   = Disturbance_prev(4:6);
                     d_hat_f = Disturbance_prev(1:3);
+                    d_hat_a = d_hat_f/params.Mass;
 
                 case 2  % Noisy measurement + LDOB
                     pos_est   = pos_est   + params.sigma_pos  .* randn(3,1);
@@ -135,23 +143,25 @@ function results = run_sim(params)
                     omega_est = omega_est + params.sigma_gyro  * randn(3,1);
                     [d_hat,   z_dob]     = LDOB(omega_est, torque_d, z_dob, params);
                     [d_hat_f, z_dob_pos] = LDOB_pos(vel_est, Acc_d_prev, z_dob_pos, params);
+                    d_hat_a = d_hat_f/p.Mass;
             end
-
+             
             %% ---- Guidance ----
-            [Acc_d, Acc_Max, THR_d, Vel_d] = POS2THR(pos_est, vel_est, X_d(1:3), params.angle_max, d_hat_f, params);
-            Acc_d_prev = Acc_d;
-            a_T   = THR_d / params.Mass;
-            att_d = ACC2ATT(Acc_d, a_T, psi);          % phi_d, theta_d from current yaw
+            [pos_des_vec, filt_pos] = CmdFilterPos(X_d(1:3), filt_pos, params.dt_ctrl, [2;2;2], params.vel_max);
+            [acc_d, acc_max, thr_d, vel_d] = POS2THR(pos_est, vel_est, pos_des_vec, d_hat_a, params);
+            Acc_d_prev = acc_d;
+            a_T   = thr_d / params.Mass;
+            att_d = ACC2ATT(acc_d, a_T, psi);          % phi_d, theta_d from current yaw
             X_d(4:5,:) = att_d(1:2);                    % keep X_d(6) = scenario yaw_d
 
             % Command filter
-            [Desired, filt_state] = CmdFilter(X_d(4:6), filt_state, params.dt_ctrl, params.angle_max, params.angle_dot_max, Torque_max, params);
+            [Desired, filt_state] = CmdFilter(X_d(4:6), filt_state, params.dt_ctrl, params.angle_max, params.angle_dot_max, torque_max, params);
             X_d(10:12) = Desired(:,2);
 
             %% ---- Attitude controller ----
             switch params.ctrl_mode
                 case 1
-                    torque_d = BACKDOB(att_est, omega_est, Desired, Torque_max, d_hat, params.K1_bsc, params.K2_bsc, params);
+                    torque_d = BACKDOB(att_est, omega_est, Desired, torque_max, d_hat, params.K1_bsc, params.K2_bsc, params);
                 case 2
                     [torque_d, ~, ~] = BACKHOCBFQP(att_est, omega_est, Desired, state_max, params);
                 case 3
@@ -161,7 +171,7 @@ function results = run_sim(params)
             end
 
             % Rotor commands
-            X_d(13:16,:) = compute_rotor_speed_CoaX(THR_d, torque_d, params.rot_max, params);
+            X_d(13:16,:) = compute_rotor_speed_CoaX(thr_d, torque_d, params.rot_max, params);
             if params.rotor_dyn_mode == 1
                 X(13:16,:) = X_d(13:16,:);          % instant, no lag
             end
@@ -188,13 +198,13 @@ function results = run_sim(params)
         end
 
         %% ---- Dynamics (use current actuator states) ----
-        [Force_body, Moment_body] = CoaX_Dyn(X(15), X(16), X(13), X(14), params);
-        Moment_rotor = Moment_body;             % rotor-only torque (before disturbance)
-        Disturbance     = DisGen(params.Dis_max, time, params.dis_mode);
-        Force_body  = Force_body  + Disturbance(1:3) + GravityForce;
-        Moment_body = Moment_body + Disturbance(4:6);
-        [X(1:12,:), ~] = sixdof(X(1:12,:), Force_body, Moment_body, params.dt_sim, params);
-        Disturbance_prev = Disturbance;
+        [force_body, moment_body] = CoaX_Dyn(X(15), X(16), X(13), X(14), params);
+        Moment_rotor = moment_body;             % rotor-only torque (before disturbance)
+        disturbance = DisGen(time, params);
+        force_body  = force_body  + disturbance(1:3) + GravityForce;
+        moment_body = moment_body + disturbance(4:6);
+        [X(1:12,:), ~] = sixdof(X(1:12,:), force_body, moment_body, params.dt_sim, params);
+        Disturbance_prev = disturbance;
 
         %% ---- Save ----
         if mod(i, save_steps) == 0
@@ -203,23 +213,23 @@ function results = run_sim(params)
             X_s(:,sc)  = X;  X_s(3,sc) = -X(3);
             X_d_s(:,sc) = X_d; X_d_s(3,sc) = -X_d(3);
             torque_d_s(:,sc) = torque_d;
-            Thrust_d_s(sc)   = THR_d;
-            Acc_d_s(:,sc) = Acc_d; Acc_d_s(3,sc) = -Acc_d(3);
-            Acc = R_bn * (Force_body / params.Mass);
+            Thrust_d_s(sc)   = thr_d;
+            Acc_d_s(:,sc) = acc_d; Acc_d_s(3,sc) = -acc_d(3);
+            Acc = R_bn * (force_body / params.Mass);
             if params.obs_mode == 3
                 Acc = Acc + params.sigma_acc .* randn(3,1);
             end
             Acc_s(:,sc) = Acc; Acc_s(3,sc) = -Acc(3);
-            Force_s(:,sc) = Force_body;  Moment_s(:,sc) = Moment_body;
+            Force_s(:,sc) = force_body;  Moment_s(:,sc) = moment_body;
             torque_rotor_s(:,sc) = Moment_rotor;
-            torque_total_s(:,sc) = Moment_body(1:3);  % rotor + disturbance
+            torque_total_s(:,sc) = moment_body(1:3);  % rotor + disturbance
             B1_s(:,sc) = state_max(:,1).^2 - X(4:6).^2;
             B2_s(:,sc) = state_max(:,2).^2 - X(10:12).^2;
-            Torque_max_s(:,sc) = Torque_max;
-            Acc_Max_s(:,sc)    = Acc_Max;
-            Disturbance_s(:,sc)= Disturbance;
+            Torque_max_s(:,sc) = torque_max;
+            Acc_Max_s(:,sc)    = acc_max;
+            Disturbance_s(:,sc)= disturbance;
             d_hat_s(:,sc)      = d_hat;
-            Vel_d_s(:,sc) = Vel_d; Vel_d_s(3,sc) = -Vel_d(3);
+            Vel_d_s(:,sc) = vel_d; Vel_d_s(3,sc) = -vel_d(3);
             Vel_NED_save  = R_bn * X(7:9);
             Vel_s(:,sc)   = Vel_NED_save; Vel_s(3,sc) = -Vel_NED_save(3);
         end

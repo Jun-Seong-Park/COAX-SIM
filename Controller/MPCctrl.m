@@ -1,4 +1,4 @@
-function U = MPCctrl2(state, state_1dot, Desired, mpcobj, x_mpc)
+function U = MPCctrl(state, state_1dot, Desired, mpcobj, x_mpc)
     warning('off', 'all'); % 모든 경고 끄기
     x = [state; state_1dot];
     r = [Desired(1,1); Desired(2,1); Desired(3,1); Desired(1,2); Desired(2,2); Desired(3,2)];

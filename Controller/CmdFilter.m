@@ -5,7 +5,7 @@ function [Desired, filt] = CmdFilter(Theta_d_raw, filt, dt, angle_max, angle_dot
 %   wn is recomputed every step from current Torque_max.
 
     J     = diag(p.Inertia);
-    d_max = p.Dis_max(2);
+    d_max = p.dis_max(2);
 
     % Use effective angle scale for wn (cap yaw at same scale as roll/pitch)
     angle_scale = min(angle_max, angle_max(1));
