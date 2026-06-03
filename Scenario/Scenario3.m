@@ -9,7 +9,7 @@ function X_d = Scenario3(t)
     t_rise = 5;    % 원 시작점까지 이동 시간
     t_wait = 5;     % 시작점 도달 후 대기 시간
     t_go   = t_rise + t_wait;   % 원 궤적 시작 시각
-    t_end = 30;
+    t_end = 60;
     
     t_circle = t_end - t_go;                 % 한 바퀴에 주어진 시간 [s]
     virtual_angvel_max = 2*pi / t_circle;    % 2π를 t_circle 안에 완주하도록 역산

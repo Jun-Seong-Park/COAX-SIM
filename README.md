@@ -1,11 +1,11 @@
 # COAX-SIM
 
-**Coaxial Counter-Rotating Rotor Drone — 6DOF MATLAB Simulator**
+**Coaxial Rotor Drone — 6DOF MATLAB Simulator**
 
 Backstepping, HOCBF-QP, Disturbance Observer, MPC를 비교 검증하기 위한 동축반전로터 드론 시뮬레이션 프레임워크.
 
 > 박준성 · 김형근, 인천대학교 기계공학과
-> 논문: *"안전 제약조건을 만족하는 제어장벽함수 기반 동축반전로터 드론 자세 제어"*
+> 논문: [*안전 제약조건을 만족하는 제어장벽함수 기반 동축반전로터 드론 자세 제어*](https://doi.org/10.5139/JKSAS.2025.53.12.1279) — 한국항공우주학회지 **53**(12), 1279–1292, 2025
 
 ---
 
@@ -29,8 +29,7 @@ Backstepping, HOCBF-QP, Disturbance Observer, MPC를 비교 검증하기 위한 
 
 ```
 COAX-SIM/
-├── main.m                    ← 메인 실행 (모드 선택 + run_sim 호출)
-├── run_sim.m                 ← 시뮬레이션 루프
+├── main.m                    ← 메인 실행 (파라미터 설정 + 시뮬레이션 루프 로컬 함수)
 ├── Controller/               ← 제어기 (BSC, HOCBF, MPC, DOB, allocation)
 ├── Dynamics/                 ← 6DOF, 로터/서보 액추에이터, 외란
 ├── Trajectory/               ← 시나리오 CSV (waypoints, RRT, obstacles)
@@ -149,10 +148,19 @@ d̂/d = L / (s + L)
 
 ## 참고 / 인용
 
-본 시뮬레이터의 HOCBF 자세제어는 다음 논문 기반:
-- 박준성, 김형근, *"안전 제약조건을 만족하는 제어장벽함수 기반 동축반전로터 드론 자세 제어"*, 인천대학교
+### 본 시뮬레이터 기반 논문
+본 시뮬레이터의 HOCBF 자세제어는 다음 논문을 구현한 것입니다:
 
-동축반전 모델·시스템 식별은 D. Schafroth 등의 muFly 시리즈 (CEP 2010, JIRS 2010) 기반.
+> 박준성, 김형근, "안전 제약조건을 만족하는 제어장벽함수 기반 동축반전로터 드론 자세 제어," *한국항공우주학회지*, vol. 53, no. 12, pp. 1279–1292, 2025.
+> [[DOI]](https://doi.org/10.5139/JKSAS.2025.53.12.1279) · [[DBpia]](https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12481530)
+
+### 동축반전 모델 · 시스템 식별
+- D. Schafroth, C. Bermes, S. Bouabdallah, R. Siegwart, "Modeling, system identification and robust control of a coaxial micro helicopter," *Control Engineering Practice*, vol. 18, no. 7, pp. 700–711, 2010. [[ScienceDirect]](https://www.sciencedirect.com/science/article/abs/pii/S0967066110000390)
+- D. Schafroth, C. Bermes, S. Bouabdallah, R. Siegwart, "Modeling and System Identification of the muFly Micro Helicopter," *Journal of Intelligent & Robotic Systems*, vol. 57, pp. 27–47, 2010. [[DOI]](https://doi.org/10.1007/s10846-009-9379-x)
+
+### 외란관측 기반 동축 UAV 제어
+- M. R. Mokhtari, B. Cherki, A. C. Braham, "Disturbance observer based hierarchical control of coaxial-rotor UAV," *ISA Transactions*, vol. 67, pp. 466–475, 2017. [[Semantic Scholar]](https://www.semanticscholar.org/paper/Disturbance-observer-based-hierarchical-control-of-Mokhtari-Cherki/e0c0405134bf2de314bc2715eb95fc9398feb2a8)
+- M. R. Mokhtari, A. C. Braham, B. Cherki, "Extended State Observer based control for coaxial-rotor UAV," *ISA Transactions*, vol. 61, pp. 1–14, 2016. [[ScienceDirect]](https://www.sciencedirect.com/science/article/abs/pii/S0019057815003006)
 
 ---
 

@@ -32,9 +32,6 @@ p.obs_mode       = 1;   % 1: true (state + disturbance)  2: LDOB
 p.K1_bsc = [15; 15; 15];
 p.K2_bsc = [5; 5; 5];
 
-
-
-
 % CBF Gain
 p.P1_cbf   = 10;                % HOCBF class-K gain (B1, 1st layer)
 p.P2_cbf   = 10;                % HOCBF class-K gain (B1, 2nd layer)
@@ -48,7 +45,14 @@ p.L_dob_ang = 0.9;             % LDOB attitude gain (obs_mode 2,3)
 p.L_dob_pos = 0.9;             % LDOB position gain (obs_mode 2,3)
 
 %% Rotor Dynamics Mode (p.rotor_dyn_mode)
-% this mode is for reality
+
+% rotor
+p.tau_sw         = 0.05;  % swashplate time constant [s] (mode 2,3)
+p.tau_rot        = 0.1;   % rotor motor time constant [s] (mode 2)
+
+% Schafroth rotor dynamics (mode 3)
+p.J_rot          = 0.01;  % rotor moment of inertia [kg·m^2]
+p.K_motor        = p.J_rot / p.tau_rot;  % motor gain [Nm/(rad/s)], consistent with tau_rot
 
 
 
@@ -60,8 +64,8 @@ p.dis_bias = [0; 0];       % [force bias; moment bias]
 
 %% Paramters for Simulation
 %% Time
-p.t0      = 0;               
-p.tf      = 30;
+p.t0       = 0;               
+p.tf       = 60;
 p.dt_sim   = 0.001;
 p.dt_ctrl  = 0.002;          % control loop period [s] (500Hz)
 p.dt_rot   = 0.005;          % rotor ESC update period [s] (200Hz)
@@ -99,13 +103,6 @@ p.c_T   = p.k     / (pi * p.rho * p.D^4);
 p.c_Q   = p.gamma / (pi * p.rho * p.D^5);
 p.Omega_hover = sqrt(p.Mass * p.g / (p.k(1) + p.k(2)));
 
-% Servo time constant
-p.tau_sw         = 0.05;  % swashplate time constant [s] (mode 2,3)
-p.tau_rot        = 0.1;   % rotor motor time constant [s] (mode 2)
-
-% Schafroth rotor dynamics (mode 3)
-p.J_rot          = 0.01;  % rotor moment of inertia [kg·m^2]
-p.K_motor        = p.J_rot / p.tau_rot;  % motor gain [Nm/(rad/s)], consistent with tau_rot
 
 
 %% Constraints
